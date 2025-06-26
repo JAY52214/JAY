@@ -6,6 +6,7 @@
     <title>최근 10년간 장마철 기상 데이터 분석</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -22,14 +23,26 @@
             text-align: center;
             font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             color: #1f2937;
         }
         /* Glassmorphism 효과를 위한 클래스 */
         .glass-card {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .metric-toggle-btn {
+            transition: all 0.3s ease;
+        }
+        .metric-toggle-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .metric-toggle-btn:not(.active) {
+            background-color: rgba(255,255,255,0.7);
+            color: #374151;
         }
     </style>
 </head>
@@ -45,52 +58,95 @@
     </header>
 
     <main class="container mx-auto p-4 md:p-8">
-        <!-- 컨트롤 섹션 -->
-        <div class="glass-card p-6 rounded-2xl shadow-xl mb-8 flex flex-col md:flex-row justify-center items-center gap-4">
-            <label for="year-select" class="text-lg font-semibold text-gray-700"><i class="fas fa-calendar-alt mr-2"></i>분석 연도 선택:</label>
-            <select id="year-select" class="bg-white/80 p-3 border-2 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                <!-- 옵션은 JS로 채워집니다. -->
-            </select>
-        </div>
+        
+        <!-- 연도별 개요 섹션 -->
+        <div class="glass-card p-6 rounded-2xl shadow-xl mb-8">
+            <h2 class="text-2xl font-bold text-center mb-4 text-slate-700">연도별 데이터 개요</h2>
+             <div class="flex flex-col md:flex-row justify-center items-center gap-4">
+                <label for="year-select" class="text-lg font-semibold text-gray-700"><i class="fas fa-calendar-alt mr-2"></i>분석 연도 선택:</label>
+                <select id="year-select" class="bg-white/80 p-3 border-2 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                    <!-- 옵션은 JS로 채워집니다. -->
+                </select>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+                <!-- 지역별 데이터 비교 차트 -->
+                <div class="bg-white/30 p-6 rounded-xl shadow-lg">
+                    <h3 id="regional-chart-title" class="chart-title"></h3>
+                    <div class="flex justify-center mb-4">
+                        <div class="inline-flex rounded-md shadow-sm" role="group">
+                            <button type="button" id="toggle-temp" class="metric-toggle-btn active py-2 px-4 text-sm font-medium rounded-l-lg border border-gray-200">
+                                <i class="fas fa-temperature-half mr-1"></i>평균 기온
+                            </button>
+                            <button type="button" id="toggle-humidity" class="metric-toggle-btn py-2 px-4 text-sm font-medium rounded-r-lg border border-gray-200">
+                                <i class="fas fa-tint mr-1"></i>평균 습도
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="regionalComparisonChart"></canvas>
+                    </div>
+                </div>
 
-        <!-- 차트 섹션 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- 지역별 데이터 비교 차트 -->
-            <div class="glass-card p-6 rounded-2xl shadow-xl">
-                <h2 id="regional-chart-title" class="chart-title"></h2>
-                <div class="chart-container">
-                    <canvas id="regionalComparisonChart"></canvas>
+                <!-- 데이터 테이블 섹션 -->
+                <div class="bg-white/30 p-6 rounded-xl shadow-lg">
+                    <div class="flex justify-between items-center">
+                        <h3 id="data-table-title" class="chart-title"></h3>
+                        <button id="download-csv" class="mb-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                            <i class="fas fa-download mr-2"></i>CSV 다운로드
+                        </button>
+                    </div>
+                     <div class="overflow-y-auto h-[45vh]">
+                        <table id="data-table" class="min-w-full bg-white/70 border border-gray-200 rounded-lg">
+                            <thead class="bg-slate-800 text-white sticky top-0">
+                                <tr>
+                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left rounded-tl-lg">지역</th>
+                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left">총 강수량 (mm)</th>
+                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left">평균 기온 (°C)</th>
+                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left rounded-tr-lg">평균 습도 (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table-body" class="text-gray-700">
+                                <!-- 데이터는 JS로 채워집니다. -->
+                            </tbody>
+                        </table>
+                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- 전국 평균 데이터 트렌드 차트 -->
-            <div class="glass-card p-6 rounded-2xl shadow-xl">
-                <h2 class="chart-title"><i class="fas fa-chart-line mr-2"></i>전국 평균 장마철 기상 변화 (10년)</h2>
-                <div class="chart-container">
-                    <canvas id="nationalTrendChart"></canvas>
-                </div>
+        <!-- 10년 추이 분석 섹션 -->
+        <div class="glass-card p-6 rounded-2xl shadow-xl my-8">
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-4">
+                <h2 class="text-2xl font-bold text-center text-slate-700">10년간 기상 변화 추이</h2>
+                <select id="trend-subject-select" class="bg-white/80 p-3 border-2 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                    <option value="National">전국 평균</option>
+                    <!-- 지역 옵션은 JS로 채워집니다. -->
+                </select>
+            </div>
+            <div class="chart-container" style="height: 50vh;">
+                <canvas id="trendChart"></canvas>
             </div>
         </div>
         
-        <!-- 데이터 테이블 섹션 -->
-        <div class="mt-10 glass-card p-6 rounded-2xl shadow-xl">
-             <h2 id="data-table-title" class="chart-title"></h2>
-             <div class="overflow-x-auto">
-                <table id="data-table" class="min-w-full bg-white/70 border border-gray-200 rounded-lg">
-                    <thead class="bg-slate-800 text-white">
-                        <tr>
-                            <th class="py-3 px-4 uppercase font-semibold text-sm text-left rounded-tl-lg">지역</th>
-                            <th class="py-3 px-4 uppercase font-semibold text-sm text-left">총 강수량 (mm)</th>
-                            <th class="py-3 px-4 uppercase font-semibold text-sm text-left">평균 기온 (°C)</th>
-                            <th class="py-3 px-4 uppercase font-semibold text-sm text-left rounded-tr-lg">평균 습도 (%)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-table-body" class="text-gray-700">
-                        <!-- 데이터는 JS로 채워집니다. -->
-                    </tbody>
-                </table>
-             </div>
+        <!-- 연도별 비교 분석 섹션 -->
+        <div class="glass-card p-6 rounded-2xl shadow-xl my-8">
+            <h2 class="text-2xl font-bold text-center text-slate-700 mb-4">연도별 데이터 비교</h2>
+            <div class="flex flex-col md:flex-row justify-center items-center gap-6">
+                 <div class="flex items-center gap-2">
+                    <label for="year1-select" class="text-lg font-semibold text-blue-600">비교 연도 1:</label>
+                    <select id="year1-select" class="bg-white/80 p-3 border-2 border-blue-300 rounded-lg shadow-sm"></select>
+                 </div>
+                 <i class="fas fa-exchange-alt text-2xl text-slate-600 hidden md:block"></i>
+                 <div class="flex items-center gap-2">
+                    <label for="year2-select" class="text-lg font-semibold text-green-600">비교 연도 2:</label>
+                    <select id="year2-select" class="bg-white/80 p-3 border-2 border-green-300 rounded-lg shadow-sm"></select>
+                 </div>
+            </div>
+             <div class="chart-container mt-6" style="height: 50vh;">
+                <canvas id="comparisonChart"></canvas>
+            </div>
         </div>
+
     </main>
 
     <footer class="text-center py-6 mt-12 bg-slate-800/90 text-gray-200">
@@ -100,256 +156,219 @@
     <script>
         // --- Mock 데이터 (2015-2024) ---
         const weatherData = [
-            { year: 2015, region: '서울', rainfall: 380, temperature: 25.1, humidity: 82 },
-            { year: 2015, region: '부산', rainfall: 450, temperature: 26.0, humidity: 88 },
-            { year: 2015, region: '대구', rainfall: 320, temperature: 26.5, humidity: 80 },
-            { year: 2015, region: '광주', rainfall: 410, temperature: 25.8, humidity: 85 },
-            { year: 2015, region: '대전', rainfall: 360, temperature: 25.3, humidity: 83 },
-            { year: 2015, region: '제주', rainfall: 550, temperature: 27.1, humidity: 90 },
-            { year: 2016, region: '서울', rainfall: 420, temperature: 25.5, humidity: 85 },
-            { year: 2016, region: '부산', rainfall: 480, temperature: 26.3, humidity: 89 },
-            { year: 2016, region: '대구', rainfall: 350, temperature: 26.8, humidity: 82 },
-            { year: 2016, region: '광주', rainfall: 450, temperature: 26.1, humidity: 87 },
-            { year: 2016, region: '대전', rainfall: 390, temperature: 25.7, humidity: 84 },
-            { year: 2016, region: '제주', rainfall: 600, temperature: 27.5, humidity: 92 },
-            { year: 2017, region: '서울', rainfall: 350, temperature: 26.0, humidity: 79 },
-            { year: 2017, region: '부산', rainfall: 410, temperature: 26.8, humidity: 85 },
-            { year: 2017, region: '대구', rainfall: 290, temperature: 27.2, humidity: 77 },
-            { year: 2017, region: '광주', rainfall: 380, temperature: 26.5, humidity: 82 },
-            { year: 2017, region: '대전', rainfall: 330, temperature: 26.1, humidity: 80 },
-            { year: 2017, region: '제주', rainfall: 520, temperature: 28.0, humidity: 88 },
-            { year: 2018, region: '서울', rainfall: 550, temperature: 24.8, humidity: 88 },
-            { year: 2018, region: '부산', rainfall: 620, temperature: 25.5, humidity: 91 },
-            { year: 2018, region: '대구', rainfall: 480, temperature: 25.9, humidity: 86 },
-            { year: 2018, region: '광주', rainfall: 590, temperature: 25.2, humidity: 90 },
-            { year: 2018, region: '대전', rainfall: 520, temperature: 25.0, humidity: 89 },
-            { year: 2018, region: '제주', rainfall: 750, temperature: 26.5, humidity: 94 },
-            { year: 2019, region: '서울', rainfall: 310, temperature: 26.5, humidity: 78 },
-            { year: 2019, region: '부산', rainfall: 380, temperature: 27.2, humidity: 84 },
-            { year: 2019, region: '대구', rainfall: 250, temperature: 27.8, humidity: 75 },
-            { year: 2019, region: '광주', rainfall: 350, temperature: 27.0, humidity: 81 },
-            { year: 2019, region: '대전', rainfall: 290, temperature: 26.7, humidity: 79 },
-            { year: 2019, region: '제주', rainfall: 480, temperature: 28.5, humidity: 87 },
-            { year: 2020, region: '서울', rainfall: 680, temperature: 24.5, humidity: 90 },
-            { year: 2020, region: '부산', rainfall: 750, temperature: 25.2, humidity: 93 },
-            { year: 2020, region: '대구', rainfall: 610, temperature: 25.5, humidity: 88 },
-            { year: 2020, region: '광주', rainfall: 720, temperature: 24.9, humidity: 92 },
-            { year: 2020, region: '대전', rainfall: 650, temperature: 24.7, humidity: 91 },
-            { year: 2020, region: '제주', rainfall: 880, temperature: 26.0, humidity: 95 },
-            { year: 2021, region: '서울', rainfall: 450, temperature: 25.8, humidity: 83 },
-            { year: 2021, region: '부산', rainfall: 510, temperature: 26.6, humidity: 87 },
-            { year: 2021, region: '대구', rainfall: 390, temperature: 27.0, humidity: 81 },
-            { year: 2021, region: '광주', rainfall: 480, temperature: 26.3, humidity: 86 },
-            { year: 2021, region: '대전', rainfall: 430, temperature: 25.9, humidity: 84 },
-            { year: 2021, region: '제주', rainfall: 620, temperature: 27.8, humidity: 90 },
-            { year: 2022, region: '서울', rainfall: 580, temperature: 25.2, humidity: 86 },
-            { year: 2022, region: '부산', rainfall: 650, temperature: 26.0, humidity: 90 },
-            { year: 2022, region: '대구', rainfall: 510, temperature: 26.4, humidity: 84 },
-            { year: 2022, region: '광주', rainfall: 620, temperature: 25.7, humidity: 89 },
-            { year: 2022, region: '대전', rainfall: 560, temperature: 25.4, humidity: 87 },
-            { year: 2022, region: '제주', rainfall: 780, temperature: 27.2, humidity: 93 },
-            { year: 2023, region: '서울', rainfall: 620, temperature: 25.0, humidity: 89 },
-            { year: 2023, region: '부산', rainfall: 700, temperature: 25.8, humidity: 92 },
-            { year: 2023, region: '대구', rainfall: 550, temperature: 26.1, humidity: 87 },
-            { year: 2023, region: '광주', rainfall: 670, temperature: 25.5, humidity: 91 },
-            { year: 2023, region: '대전', rainfall: 600, temperature: 25.2, humidity: 90 },
-            { year: 2023, region: '제주', rainfall: 820, temperature: 27.0, humidity: 94 },
-            { year: 2024, region: '서울', rainfall: 480, temperature: 26.2, humidity: 81 },
-            { year: 2024, region: '부산', rainfall: 550, temperature: 27.0, humidity: 86 },
-            { year: 2024, region: '대구', rainfall: 410, temperature: 27.5, humidity: 79 },
-            { year: 2024, region: '광주', rainfall: 520, temperature: 26.8, humidity: 84 },
-            { year: 2024, region: '대전', rainfall: 460, temperature: 26.4, humidity: 82 },
-            { year: 2024, region: '제주', rainfall: 650, temperature: 28.2, humidity: 89 },
+            { year: 2015, region: '서울', rainfall: 380, temperature: 25.1, humidity: 82 }, { year: 2015, region: '부산', rainfall: 450, temperature: 26.0, humidity: 88 }, { year: 2015, region: '대구', rainfall: 320, temperature: 26.5, humidity: 80 }, { year: 2015, region: '광주', rainfall: 410, temperature: 25.8, humidity: 85 }, { year: 2015, region: '대전', rainfall: 360, temperature: 25.3, humidity: 83 }, { year: 2015, region: '제주', rainfall: 550, temperature: 27.1, humidity: 90 },
+            { year: 2016, region: '서울', rainfall: 420, temperature: 25.5, humidity: 85 }, { year: 2016, region: '부산', rainfall: 480, temperature: 26.3, humidity: 89 }, { year: 2016, region: '대구', rainfall: 350, temperature: 26.8, humidity: 82 }, { year: 2016, region: '광주', rainfall: 450, temperature: 26.1, humidity: 87 }, { year: 2016, region: '대전', rainfall: 390, temperature: 25.7, humidity: 84 }, { year: 2016, region: '제주', rainfall: 600, temperature: 27.5, humidity: 92 },
+            { year: 2017, region: '서울', rainfall: 350, temperature: 26.0, humidity: 79 }, { year: 2017, region: '부산', rainfall: 410, temperature: 26.8, humidity: 85 }, { year: 2017, region: '대구', rainfall: 290, temperature: 27.2, humidity: 77 }, { year: 2017, region: '광주', rainfall: 380, temperature: 26.5, humidity: 82 }, { year: 2017, region: '대전', rainfall: 330, temperature: 26.1, humidity: 80 }, { year: 2017, region: '제주', rainfall: 520, temperature: 28.0, humidity: 88 },
+            { year: 2018, region: '서울', rainfall: 550, temperature: 24.8, humidity: 88 }, { year: 2018, region: '부산', rainfall: 620, temperature: 25.5, humidity: 91 }, { year: 2018, region: '대구', rainfall: 480, temperature: 25.9, humidity: 86 }, { year: 2018, region: '광주', rainfall: 590, temperature: 25.2, humidity: 90 }, { year: 2018, region: '대전', rainfall: 520, temperature: 25.0, humidity: 89 }, { year: 2018, region: '제주', rainfall: 750, temperature: 26.5, humidity: 94 },
+            { year: 2019, region: '서울', rainfall: 310, temperature: 26.5, humidity: 78 }, { year: 2019, region: '부산', rainfall: 380, temperature: 27.2, humidity: 84 }, { year: 2019, region: '대구', rainfall: 250, temperature: 27.8, humidity: 75 }, { year: 2019, region: '광주', rainfall: 350, temperature: 27.0, humidity: 81 }, { year: 2019, region: '대전', rainfall: 290, temperature: 26.7, humidity: 79 }, { year: 2019, region: '제주', rainfall: 480, temperature: 28.5, humidity: 87 },
+            { year: 2020, region: '서울', rainfall: 680, temperature: 24.5, humidity: 90 }, { year: 2020, region: '부산', rainfall: 750, temperature: 25.2, humidity: 93 }, { year: 2020, region: '대구', rainfall: 610, temperature: 25.5, humidity: 88 }, { year: 2020, region: '광주', rainfall: 720, temperature: 24.9, humidity: 92 }, { year: 2020, region: '대전', rainfall: 650, temperature: 24.7, humidity: 91 }, { year: 2020, region: '제주', rainfall: 880, temperature: 26.0, humidity: 95 },
+            { year: 2021, region: '서울', rainfall: 450, temperature: 25.8, humidity: 83 }, { year: 2021, region: '부산', rainfall: 510, temperature: 26.6, humidity: 87 }, { year: 2021, region: '대구', rainfall: 390, temperature: 27.0, humidity: 81 }, { year: 2021, region: '광주', rainfall: 480, temperature: 26.3, humidity: 86 }, { year: 2021, region: '대전', rainfall: 430, temperature: 25.9, humidity: 84 }, { year: 2021, region: '제주', rainfall: 620, temperature: 27.8, humidity: 90 },
+            { year: 2022, region: '서울', rainfall: 580, temperature: 25.2, humidity: 86 }, { year: 2022, region: '부산', rainfall: 650, temperature: 26.0, humidity: 90 }, { year: 2022, region: '대구', rainfall: 510, temperature: 26.4, humidity: 84 }, { year: 2022, region: '광주', rainfall: 620, temperature: 25.7, humidity: 89 }, { year: 2022, region: '대전', rainfall: 560, temperature: 25.4, humidity: 87 }, { year: 2022, region: '제주', rainfall: 780, temperature: 27.2, humidity: 93 },
+            { year: 2023, region: '서울', rainfall: 620, temperature: 25.0, humidity: 89 }, { year: 2023, region: '부산', rainfall: 700, temperature: 25.8, humidity: 92 }, { year: 2023, region: '대구', rainfall: 550, temperature: 26.1, humidity: 87 }, { year: 2023, region: '광주', rainfall: 670, temperature: 25.5, humidity: 91 }, { year: 2023, region: '대전', rainfall: 600, temperature: 25.2, humidity: 90 }, { year: 2023, region: '제주', rainfall: 820, temperature: 27.0, humidity: 94 },
+            { year: 2024, region: '서울', rainfall: 480, temperature: 26.2, humidity: 81 }, { year: 2024, region: '부산', rainfall: 550, temperature: 27.0, humidity: 86 }, { year: 2024, region: '대구', rainfall: 410, temperature: 27.5, humidity: 79 }, { year: 2024, region: '광주', rainfall: 520, temperature: 26.8, humidity: 84 }, { year: 2024, region: '대전', rainfall: 460, temperature: 26.4, humidity: 82 }, { year: 2024, region: '제주', rainfall: 650, temperature: 28.2, humidity: 89 },
         ];
 
-        let regionalChart, nationalTrendChart;
-        const yearSelect = document.getElementById('year-select');
-        const regionalChartTitle = document.getElementById('regional-chart-title');
-        const dataTableTitle = document.getElementById('data-table-title');
+        let regionalChart, trendChart, comparisonChart;
+        let currentMetric = 'temperature';
+        const allYears = [...new Set(weatherData.map(d => d.year))].sort((a, b) => b - a);
+        const allRegions = [...new Set(weatherData.map(d => d.region))];
 
         document.addEventListener('DOMContentLoaded', () => {
-            const years = [...new Set(weatherData.map(d => d.year))].sort((a, b) => b - a);
-            years.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = `${year}년`;
-                yearSelect.appendChild(option);
-            });
-
-            yearSelect.addEventListener('change', (e) => {
-                updateVisualizations(parseInt(e.target.value));
-            });
+            // --- Element Caching ---
+            const yearSelect = document.getElementById('year-select');
+            const toggleTempBtn = document.getElementById('toggle-temp');
+            const toggleHumidityBtn = document.getElementById('toggle-humidity');
+            const downloadCsvBtn = document.getElementById('download-csv');
+            const trendSubjectSelect = document.getElementById('trend-subject-select');
+            const year1Select = document.getElementById('year1-select');
+            const year2Select = document.getElementById('year2-select');
             
-            const latestYear = years[0];
-            updateVisualizations(latestYear);
-            drawNationalTrendChart(years.sort((a,b)=> a-b));
+            // --- Populate Selectors ---
+            populateSelector(yearSelect, allYears, (y) => `${y}년`);
+            populateSelector(trendSubjectSelect, allRegions, (r) => r, false);
+            populateSelector(year1Select, allYears, (y) => `${y}년`);
+            populateSelector(year2Select, allYears, (y) => `${y}년`);
+            year1Select.value = allYears[0];
+            year2Select.value = allYears[1];
+
+            // --- Initial Render ---
+            updateYearlyOverview();
+            drawTrendChart();
+            drawComparisonChart();
+
+            // --- Event Listeners ---
+            yearSelect.addEventListener('change', updateYearlyOverview);
+            downloadCsvBtn.addEventListener('click', downloadCSV);
+            trendSubjectSelect.addEventListener('change', drawTrendChart);
+            year1Select.addEventListener('change', drawComparisonChart);
+            year2Select.addEventListener('change', drawComparisonChart);
+            
+            toggleTempBtn.addEventListener('click', () => setMetric('temperature'));
+            toggleHumidityBtn.addEventListener('click', () => setMetric('humidity'));
         });
 
-        function updateVisualizations(year) {
-            yearSelect.value = year;
-            regionalChartTitle.textContent = `${year}년 지역별 기상 데이터 비교`;
-            dataTableTitle.textContent = `${year}년 상세 데이터`;
-            drawRegionalComparisonChart(year);
-            populateDataTable(year);
-        }
-
-        function drawRegionalComparisonChart(year) {
-            const ctx = document.getElementById('regionalComparisonChart').getContext('2d');
-            const yearData = weatherData.filter(d => d.year === year);
-            const regions = yearData.map(d => d.region);
-            const rainfallData = yearData.map(d => d.rainfall);
-            const tempData = yearData.map(d => d.temperature);
-
-            if (regionalChart) regionalChart.destroy();
-
-            regionalChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: regions,
-                    datasets: [
-                        {
-                            label: '강수량 (mm)',
-                            data: rainfallData,
-                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1,
-                            yAxisID: 'y',
-                            barPercentage: 0.5, 
-                            categoryPercentage: 0.8
-                        },
-                        {
-                            label: '평균 기온 (°C)',
-                            data: tempData,
-                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 2,
-                            type: 'line',
-                            yAxisID: 'y1',
-                            tension: 0.3,
-                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                            pointRadius: 4,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    if (context.parsed.y !== null) {
-                                        label += context.parsed.y;
-                                        label += context.dataset.yAxisID === 'y' ? ' mm' : ' °C';
-                                    }
-                                    return label;
-                                }
-                            }
-                        },
-                        legend: { position: 'top' }
-                    },
-                    scales: {
-                        x: { grid: { display: false } },
-                        y: {
-                            type: 'linear',
-                            position: 'left',
-                            title: { display: true, text: '강수량 (mm)', font: { weight: 'bold' } },
-                            beginAtZero: true
-                        },
-                        y1: {
-                            type: 'linear',
-                            position: 'right',
-                            title: { display: true, text: '평균 기온 (°C)', font: { weight: 'bold' } },
-                            grid: { drawOnChartArea: false },
-                            min: 20, max: 30
-                        }
-                    }
-                }
+        function populateSelector(selectElement, items, formatter, shouldClear = true) {
+            if (shouldClear) selectElement.innerHTML = '';
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item;
+                option.textContent = formatter(item);
+                selectElement.appendChild(option);
             });
         }
         
-        function drawNationalTrendChart(years) {
-            const nationalAverages = years.map(year => {
-                const yearData = weatherData.filter(d => d.year === year);
-                const avgRainfall = yearData.reduce((sum, d) => sum + d.rainfall, 0) / yearData.length;
-                const avgTemp = yearData.reduce((sum, d) => sum + d.temperature, 0) / yearData.length;
-                return { year, avgRainfall, avgTemp };
-            });
+        function setMetric(metric) {
+            currentMetric = metric;
+            document.getElementById('toggle-temp').classList.toggle('active', metric === 'temperature');
+            document.getElementById('toggle-humidity').classList.toggle('active', metric === 'humidity');
+            updateYearlyOverview();
+        }
 
-            const ctx = document.getElementById('nationalTrendChart').getContext('2d');
-            if (nationalTrendChart) nationalTrendChart.destroy();
+        function updateYearlyOverview() {
+            const selectedYear = parseInt(document.getElementById('year-select').value);
+            drawRegionalComparisonChart(selectedYear);
+            populateDataTable(selectedYear);
+        }
+
+        function drawRegionalComparisonChart(year) {
+            const yearData = weatherData.filter(d => d.year === year);
+            const isTemp = currentMetric === 'temperature';
+            const metricData = yearData.map(d => isTemp ? d.temperature : d.humidity);
+            const metricLabel = isTemp ? '평균 기온 (°C)' : '평균 습도 (%)';
+            const metricColor = isTemp ? 'rgba(255, 99, 132, 1)' : 'rgba(255, 159, 64, 1)';
+
+            const ctx = document.getElementById('regionalComparisonChart').getContext('2d');
+            if (regionalChart) regionalChart.destroy();
             
-            nationalTrendChart = new Chart(ctx, {
+            regionalChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: years.map(y => `${y}년`),
+                    labels: allRegions,
                     datasets: [
-                        {
-                            label: '평균 강수량 (mm)',
-                            data: nationalAverages.map(d => d.avgRainfall.toFixed(1)),
-                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            yAxisID: 'y',
-                            barPercentage: 0.5,
-                            categoryPercentage: 0.8
-                        },
-                        {
-                            label: '평균 기온 (°C)',
-                            data: nationalAverages.map(d => d.avgTemp.toFixed(1)),
-                            type: 'line',
-                            borderColor: 'rgba(255, 159, 64, 1)',
-                            backgroundColor: 'rgba(255, 159, 64, 0.7)',
-                            yAxisID: 'y1',
-                            tension: 0.3,
-                            pointBackgroundColor: 'rgba(255, 159, 64, 1)',
-                            pointRadius: 4,
-                        }
+                        { label: '강수량 (mm)', data: yearData.map(d => d.rainfall), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
+                        { label: metricLabel, data: metricData, borderColor: metricColor, backgroundColor: metricColor, type: 'line', yAxisID: 'y1', tension: 0.3 }
                     ]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            position: 'left',
-                            title: { display: true, text: '평균 강수량 (mm)', font: { weight: 'bold' } },
-                            beginAtZero: true
-                        },
-                        y1: {
-                            type: 'linear',
-                            position: 'right',
-                            title: { display: true, text: '평균 기온 (°C)', font: { weight: 'bold' } },
-                            grid: { drawOnChartArea: false },
-                            min: 22, max: 28
-                        }
-                    }
-                }
+                options: getChartOptions({ y1Label: metricLabel, y1Min: isTemp ? 20 : 70, y1Max: isTemp ? 30 : 100 })
+            });
+            document.getElementById('regional-chart-title').textContent = `${year}년 지역별 데이터`;
+        }
+        
+        function drawTrendChart() {
+            const subject = document.getElementById('trend-subject-select').value;
+            let trendData;
+            
+            if (subject === 'National') {
+                trendData = allYears.map(year => {
+                    const yearData = weatherData.filter(d => d.year === year);
+                    return {
+                        year: year,
+                        rainfall: yearData.reduce((s, c) => s + c.rainfall, 0) / yearData.length,
+                        temperature: yearData.reduce((s, c) => s + c.temperature, 0) / yearData.length,
+                        humidity: yearData.reduce((s, c) => s + c.humidity, 0) / yearData.length,
+                    };
+                }).reverse();
+            } else {
+                trendData = weatherData.filter(d => d.region === subject);
+            }
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (trendChart) trendChart.destroy();
+            
+            trendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: trendData.map(d => d.year),
+                    datasets: [
+                        { label: '강수량 (mm)', data: trendData.map(d => d.rainfall), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
+                        { label: '평균 기온 (°C)', data: trendData.map(d => d.temperature), borderColor: 'rgba(255, 99, 132, 1)', type: 'line', yAxisID: 'y1', tension: 0.3 },
+                        { label: '평균 습도 (%)', data: trendData.map(d => d.humidity), borderColor: 'rgba(255, 159, 64, 1)', type: 'line', yAxisID: 'y2', tension: 0.3 }
+                    ]
+                },
+                options: getChartOptions({ y1Label: '평균 기온 (°C)', y2Label: '평균 습도 (%)', y1Min: 20, y1Max: 30, y2Min: 70, y2Max: 100 })
+            });
+        }
+        
+        function drawComparisonChart() {
+            const year1 = parseInt(document.getElementById('year1-select').value);
+            const year2 = parseInt(document.getElementById('year2-select').value);
+
+            if (year1 === year2) return; // 같은 연도는 비교하지 않음
+
+            const year1Data = weatherData.filter(d => d.year === year1);
+            const year2Data = weatherData.filter(d => d.year === year2);
+            
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            if (comparisonChart) comparisonChart.destroy();
+
+            comparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: allRegions,
+                    datasets: [
+                        { label: `${year1}년 강수량 (mm)`, data: year1Data.map(d => d.rainfall), backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                        { label: `${year2}년 강수량 (mm)`, data: year2Data.map(d => d.rainfall), backgroundColor: 'rgba(75, 192, 192, 0.7)' }
+                    ]
+                },
+                options: getChartOptions({})
             });
         }
 
         function populateDataTable(year) {
             const tableBody = document.getElementById('data-table-body');
             tableBody.innerHTML = '';
-            const yearData = weatherData.filter(d => d.year === year);
-            yearData.forEach((d, index) => {
-                let rowClasses = "border-b border-gray-200/50 hover:bg-white/50";
-                if (index === yearData.length - 1) {
-                   rowClasses = "hover:bg-white/50"; // 마지막 행에는 border-b 제거
-                }
-                const row = `
-                    <tr class="${rowClasses}">
-                        <td class="py-3 px-4">${d.region}</td>
-                        <td class="py-3 px-4">${d.rainfall.toFixed(1)}</td>
-                        <td class="py-3 px-4">${d.temperature.toFixed(1)}</td>
-                        <td class="py-3 px-4">${d.humidity.toFixed(1)}</td>
-                    </tr>
+            weatherData.filter(d => d.year === year).forEach(d => {
+                const row = document.createElement('tr');
+                row.className = "border-b border-gray-200/50 hover:bg-white/50";
+                row.innerHTML = `
+                    <td class="py-3 px-4">${d.region}</td>
+                    <td class="py-3 px-4">${d.rainfall.toFixed(1)}</td>
+                    <td class="py-3 px-4">${d.temperature.toFixed(1)}</td>
+                    <td class="py-3 px-4">${d.humidity.toFixed(1)}</td>
                 `;
-                tableBody.innerHTML += row;
+                tableBody.appendChild(row);
             });
+             document.getElementById('data-table-title').textContent = `${year}년 상세 데이터`;
+        }
+
+        function downloadCSV() {
+            const year = document.getElementById('year-select').value;
+            const yearData = weatherData.filter(d => d.year == year);
+            
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "지역,총 강수량(mm),평균 기온(°C),평균 습도(%)\n";
+            
+            yearData.forEach(row => {
+                csvContent += `${row.region},${row.rainfall},${row.temperature},${row.humidity}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `monsoon_data_${year}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function getChartOptions({ y1Label, y2Label, y1Min, y1Max, y2Min, y2Max }) {
+             const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { type: 'linear', position: 'left', title: { display: true, text: '강수량 (mm)', font: { weight: 'bold' } }, beginAtZero: true }
+                }
+            };
+            if(y1Label) {
+                options.scales.y1 = { type: 'linear', position: 'right', title: { display: true, text: y1Label, font: { weight: 'bold' } }, grid: { drawOnChartArea: false }, min: y1Min, max: y1Max };
+            }
+            if(y2Label) {
+                 options.scales.y2 = { type: 'linear', position: 'right', title: { display: true, text: y2Label, font: { weight: 'bold' } }, grid: { drawOnChartArea: false }, min: y2Min, max: y2Max, ticks: { display: false } }; // y2 축은 제목만 표시
+            }
+            return options;
         }
     </script>
 </body>
