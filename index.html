@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" class="light">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -152,12 +152,13 @@
 
         // --- Theme Management ---
         const themeToggle = document.getElementById('theme-toggle');
-        const userTheme = localStorage.getItem('theme');
-        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
         const themeCheck = () => {
-            if (userTheme === 'dark' || (!userTheme && systemTheme)) {
+            // 로컬 스토리지에 'theme' 값이 'dark'일 경우에만 다크 모드 적용
+            if (localStorage.getItem('theme') === 'dark') {
                 document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
             }
         };
 
