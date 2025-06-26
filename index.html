@@ -53,7 +53,21 @@ export default function App() {
     setSelectedCities(values);
   };
   
+  const handleYearChange = (index, value) => {
+    const newYearRange = [...yearRange];
+    newYearRange[index] = value;
+    // 시작년도가 종료년도보다 커지지 않게, 종료년도가 시작년도보다 작아지지 않게 방지
+    if (index === 0 && value > newYearRange[1]) {
+      newYearRange[1] = value;
+    }
+    if (index === 1 && value < newYearRange[0]) {
+      newYearRange[0] = value;
+    }
+    setYearRange(newYearRange);
+  };
+
   const combinedChartData = useMemo(() => {
+    if (yearRange[0] > yearRange[1]) return [];
     const years = Array.from({ length: yearRange[1] - yearRange[0] + 1 }, (_, i) => yearRange[0] + i);
     
     return years.map(year => {
@@ -75,7 +89,7 @@ export default function App() {
     const headers = ['year'].concat(selectedCities.map(c => `${c}_${dataType}`));
     const csvContent = [
       headers.join(','),
-      ...tableData.map(row => headers.map(header => row[header]).join(','))
+      ...tableData.map(row => headers.map(header => row[header] ?? '').join(','))
     ].join('\n');
     
     const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
@@ -130,10 +144,15 @@ export default function App() {
             <div className="lg:col-span-2 space-y-6">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">기간 선택: {yearRange[0]}년 - {yearRange[1]}년</label>
-                <div className="flex items-center space-x-4">
-                    <span className="text-sm font-medium text-slate-500">{2015}</span>
-                    <input type="range" min="2015" max="2024" value={yearRange[1]} onChange={(e) => setYearRange([yearRange[0], parseInt(e.target.value)])} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-500"/>
-                    <span className="text-sm font-medium text-slate-500">{2024}</span>
+                <div className="grid grid-cols-2 gap-x-4">
+                  <div>
+                      <label htmlFor="start-year" className="text-xs text-slate-500">시작 연도</label>
+                      <input id="start-year" type="range" min="2015" max="2024" value={yearRange[0]} onChange={(e) => handleYearChange(0, parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-500"/>
+                  </div>
+                  <div>
+                      <label htmlFor="end-year" className="text-xs text-slate-500">종료 연도</label>
+                      <input id="end-year" type="range" min="2015" max="2024" value={yearRange[1]} onChange={(e) => handleYearChange(1, parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-500"/>
+                  </div>
                 </div>
               </div>
                <div>
@@ -239,3 +258,4 @@ export default function App() {
     </div>
   );
 }
+
