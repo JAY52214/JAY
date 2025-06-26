@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
@@ -19,139 +24,111 @@
             height: 45vh;
             width: 100%;
         }
-        .chart-title {
-            text-align: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: #1f2937;
-        }
-        /* Glassmorphism 효과를 위한 클래스 */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.65);
+        .data-card {
+            background-color: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+            transition: background-color 0.3s ease;
         }
-        .metric-toggle-btn {
-            transition: all 0.3s ease;
+        .dark .data-card {
+            background-color: rgba(31, 41, 55, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .metric-toggle-btn.active {
-            background-color: #3b82f6;
-            color: white;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        .custom-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
         }
-        .metric-toggle-btn:not(.active) {
-            background-color: rgba(255,255,255,0.7);
-            color: #374151;
+        .dark .custom-select {
+             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-200 via-cyan-100 to-green-200 text-gray-800">
+<body class="bg-gradient-to-br from-sky-100 via-purple-100 to-pink-100 dark:bg-gradient-to-br dark:from-slate-900 dark:via-blue-950 dark:to-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
 
-    <header class="bg-white/80 backdrop-blur-sm shadow-lg sticky top-0 z-50 transition-all duration-300">
-        <div class="container mx-auto px-4 py-6">
-            <h1 class="text-3xl font-bold text-center text-slate-800">
-                <i class="fas fa-cloud-showers-heavy mr-3 text-blue-500"></i>최근 10년 장마철 기상 분석
+    <header class="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-white">
+                <i class="fas fa-cloud-showers-heavy mr-2 text-blue-500"></i>장마철 기상 분석
             </h1>
-            <p class="text-center text-slate-600 mt-2">지난 10년간의 장마철 강수량, 기온, 습도 데이터를 비교 분석합니다.</p>
+            <button id="theme-toggle" class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                <i class="fas fa-sun text-yellow-500 dark:hidden"></i>
+                <i class="fas fa-moon text-blue-300 hidden dark:inline"></i>
+            </button>
         </div>
     </header>
 
-    <main class="container mx-auto p-4 md:p-8">
+    <main class="container mx-auto p-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- 연도별 개요 섹션 -->
-        <div class="glass-card p-6 rounded-2xl shadow-xl mb-8">
-            <h2 class="text-2xl font-bold text-center mb-4 text-slate-700">연도별 데이터 개요</h2>
-             <div class="flex flex-col md:flex-row justify-center items-center gap-4">
-                <label for="year-select" class="text-lg font-semibold text-gray-700"><i class="fas fa-calendar-alt mr-2"></i>분석 연도 선택:</label>
-                <select id="year-select" class="bg-white/80 p-3 border-2 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                    <!-- 옵션은 JS로 채워집니다. -->
-                </select>
+        <section class="data-card p-6 mb-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-700 dark:text-slate-200 mb-4 sm:mb-0">연도별 데이터 개요</h2>
+                <div class="flex items-center gap-2">
+                    <label for="year-select" class="font-semibold text-slate-600 dark:text-slate-300">연도:</label>
+                    <select id="year-select" class="custom-select w-32 bg-slate-50/70 dark:bg-slate-700/70 border border-slate-300 dark:border-slate-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-                <!-- 지역별 데이터 비교 차트 -->
-                <div class="bg-white/30 p-6 rounded-xl shadow-lg">
-                    <h3 id="regional-chart-title" class="chart-title"></h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
                     <div class="flex justify-center mb-4">
-                        <div class="inline-flex rounded-md shadow-sm" role="group">
-                            <button type="button" id="toggle-temp" class="metric-toggle-btn active py-2 px-4 text-sm font-medium rounded-l-lg border border-gray-200">
-                                <i class="fas fa-temperature-half mr-1"></i>평균 기온
-                            </button>
-                            <button type="button" id="toggle-humidity" class="metric-toggle-btn py-2 px-4 text-sm font-medium rounded-r-lg border border-gray-200">
-                                <i class="fas fa-tint mr-1"></i>평균 습도
-                            </button>
+                        <div class="inline-flex rounded-lg shadow-sm" role="group">
+                            <button id="toggle-temp" class="py-2 px-4 text-sm font-medium rounded-l-lg border border-slate-300 dark:border-slate-600"><i class="fas fa-temperature-half mr-1"></i>평균 기온</button>
+                            <button id="toggle-humidity" class="py-2 px-4 text-sm font-medium rounded-r-lg border-y border-r border-slate-300 dark:border-slate-600"><i class="fas fa-tint mr-1"></i>평균 습도</button>
                         </div>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="regionalComparisonChart"></canvas>
-                    </div>
+                    <div class="chart-container"><canvas id="regionalComparisonChart"></canvas></div>
                 </div>
-
-                <!-- 데이터 테이블 섹션 -->
-                <div class="bg-white/30 p-6 rounded-xl shadow-lg">
-                    <div class="flex justify-between items-center">
-                        <h3 id="data-table-title" class="chart-title"></h3>
-                        <button id="download-csv" class="mb-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                            <i class="fas fa-download mr-2"></i>CSV 다운로드
+                <div>
+                    <div class="flex justify-end mb-4">
+                        <button id="download-csv" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                            <i class="fas fa-download mr-2"></i>CSV
                         </button>
                     </div>
-                     <div class="overflow-y-auto h-[45vh]">
-                        <table id="data-table" class="min-w-full bg-white/70 border border-gray-200 rounded-lg">
-                            <thead class="bg-slate-800 text-white sticky top-0">
+                     <div class="overflow-y-auto h-[45vh] bg-white/20 dark:bg-black/10 rounded-lg">
+                        <table id="data-table" class="min-w-full text-sm text-left">
+                            <thead class="bg-slate-200/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 uppercase sticky top-0 backdrop-blur-sm">
                                 <tr>
-                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left rounded-tl-lg">지역</th>
-                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left">총 강수량 (mm)</th>
-                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left">평균 기온 (°C)</th>
-                                    <th class="py-3 px-4 uppercase font-semibold text-sm text-left rounded-tr-lg">평균 습도 (%)</th>
+                                    <th class="py-3 px-4 rounded-tl-lg">지역</th>
+                                    <th class="py-3 px-4">총 강수량(mm)</th>
+                                    <th class="py-3 px-4">평균 기온(°C)</th>
+                                    <th class="py-3 px-4 rounded-tr-lg">평균 습도(%)</th>
                                 </tr>
                             </thead>
-                            <tbody id="data-table-body" class="text-gray-700">
-                                <!-- 데이터는 JS로 채워집니다. -->
-                            </tbody>
+                            <tbody id="data-table-body" class="divide-y divide-slate-200/50 dark:divide-slate-700/50"></tbody>
                         </table>
                      </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- 10년 추이 분석 섹션 -->
-        <div class="glass-card p-6 rounded-2xl shadow-xl my-8">
-            <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-4">
-                <h2 class="text-2xl font-bold text-center text-slate-700">10년간 기상 변화 추이</h2>
-                <select id="trend-subject-select" class="bg-white/80 p-3 border-2 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+        <section class="data-card p-6 my-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-700 dark:text-slate-200 mb-4 sm:mb-0">10년간 기상 변화 추이</h2>
+                <select id="trend-subject-select" class="custom-select w-36 bg-slate-50/70 dark:bg-slate-700/70 border border-slate-300 dark:border-slate-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="National">전국 평균</option>
-                    <!-- 지역 옵션은 JS로 채워집니다. -->
                 </select>
             </div>
-            <div class="chart-container" style="height: 50vh;">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
+            <div class="chart-container" style="height: 50vh;"><canvas id="trendChart"></canvas></div>
+        </section>
         
-        <!-- 연도별 비교 분석 섹션 -->
-        <div class="glass-card p-6 rounded-2xl shadow-xl my-8">
-            <h2 class="text-2xl font-bold text-center text-slate-700 mb-4">연도별 데이터 비교</h2>
-            <div class="flex flex-col md:flex-row justify-center items-center gap-6">
-                 <div class="flex items-center gap-2">
-                    <label for="year1-select" class="text-lg font-semibold text-blue-600">비교 연도 1:</label>
-                    <select id="year1-select" class="bg-white/80 p-3 border-2 border-blue-300 rounded-lg shadow-sm"></select>
-                 </div>
-                 <i class="fas fa-exchange-alt text-2xl text-slate-600 hidden md:block"></i>
-                 <div class="flex items-center gap-2">
-                    <label for="year2-select" class="text-lg font-semibold text-green-600">비교 연도 2:</label>
-                    <select id="year2-select" class="bg-white/80 p-3 border-2 border-green-300 rounded-lg shadow-sm"></select>
-                 </div>
+        <section class="data-card p-6 my-8">
+            <h2 class="text-xl font-bold text-slate-700 dark:text-slate-200 mb-6 text-center">연도별 강수량 비교</h2>
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-6">
+                 <select id="year1-select" class="custom-select w-32 bg-slate-50/70 dark:bg-slate-700/70 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-2"></select>
+                 <i class="fas fa-exchange-alt text-2xl text-slate-500 dark:text-slate-400 rotate-90 md:rotate-0"></i>
+                 <select id="year2-select" class="custom-select w-32 bg-slate-50/70 dark:bg-slate-700/70 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg p-2"></select>
             </div>
-             <div class="chart-container mt-6" style="height: 50vh;">
-                <canvas id="comparisonChart"></canvas>
-            </div>
-        </div>
+             <div class="chart-container mt-6" style="height: 50vh;"><canvas id="comparisonChart"></canvas></div>
+        </section>
 
     </main>
-
-    <footer class="text-center py-6 mt-12 bg-slate-800/90 text-gray-200">
-        <p>&copy; 2024 기상 데이터 분석 프로젝트. All rights reserved.</p>
-    </footer>
 
     <script>
         // --- Mock 데이터 (2015-2024) ---
@@ -173,39 +150,65 @@
         const allYears = [...new Set(weatherData.map(d => d.year))].sort((a, b) => b - a);
         const allRegions = [...new Set(weatherData.map(d => d.region))];
 
+        // --- Theme Management ---
+        const themeToggle = document.getElementById('theme-toggle');
+        const userTheme = localStorage.getItem('theme');
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        const themeCheck = () => {
+            if (userTheme === 'dark' || (!userTheme && systemTheme)) {
+                document.documentElement.classList.add('dark');
+            }
+        };
+
+        const themeSwitch = () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            redrawAllCharts();
+        };
+
+        themeToggle.addEventListener('click', themeSwitch);
+        
+        // --- App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Element Caching ---
+            themeCheck();
+            
             const yearSelect = document.getElementById('year-select');
-            const toggleTempBtn = document.getElementById('toggle-temp');
-            const toggleHumidityBtn = document.getElementById('toggle-humidity');
-            const downloadCsvBtn = document.getElementById('download-csv');
             const trendSubjectSelect = document.getElementById('trend-subject-select');
             const year1Select = document.getElementById('year1-select');
             const year2Select = document.getElementById('year2-select');
             
-            // --- Populate Selectors ---
-            populateSelector(yearSelect, allYears, (y) => `${y}년`);
-            populateSelector(trendSubjectSelect, allRegions, (r) => r, false);
-            populateSelector(year1Select, allYears, (y) => `${y}년`);
-            populateSelector(year2Select, allYears, (y) => `${y}년`);
+            populateSelector(yearSelect, allYears, y => `${y}년`);
+            populateSelector(trendSubjectSelect, allRegions, r => r, false);
+            populateSelector(year1Select, allYears, y => `${y}년`);
+            populateSelector(year2Select, allYears, y => `${y}년`);
             year1Select.value = allYears[0];
             year2Select.value = allYears[1];
 
-            // --- Initial Render ---
+            setMetric('temperature'); // Set initial state
             updateYearlyOverview();
             drawTrendChart();
             drawComparisonChart();
 
-            // --- Event Listeners ---
-            yearSelect.addEventListener('change', updateYearlyOverview);
-            downloadCsvBtn.addEventListener('click', downloadCSV);
-            trendSubjectSelect.addEventListener('change', drawTrendChart);
-            year1Select.addEventListener('change', drawComparisonChart);
-            year2Select.addEventListener('change', drawComparisonChart);
-            
-            toggleTempBtn.addEventListener('click', () => setMetric('temperature'));
-            toggleHumidityBtn.addEventListener('click', () => setMetric('humidity'));
+            document.getElementById('year-select').addEventListener('change', updateYearlyOverview);
+            document.getElementById('download-csv').addEventListener('click', downloadCSV);
+            document.getElementById('trend-subject-select').addEventListener('change', drawTrendChart);
+            document.getElementById('year1-select').addEventListener('change', drawComparisonChart);
+            document.getElementById('year2-select').addEventListener('change', drawComparisonChart);
+            document.getElementById('toggle-temp').addEventListener('click', () => setMetric('temperature'));
+            document.getElementById('toggle-humidity').addEventListener('click', () => setMetric('humidity'));
         });
+        
+        function redrawAllCharts() {
+            updateYearlyOverview();
+            drawTrendChart();
+            drawComparisonChart();
+        }
 
         function populateSelector(selectElement, items, formatter, shouldClear = true) {
             if (shouldClear) selectElement.innerHTML = '';
@@ -219,8 +222,19 @@
         
         function setMetric(metric) {
             currentMetric = metric;
-            document.getElementById('toggle-temp').classList.toggle('active', metric === 'temperature');
-            document.getElementById('toggle-humidity').classList.toggle('active', metric === 'humidity');
+            const tempBtn = document.getElementById('toggle-temp');
+            const humidityBtn = document.getElementById('toggle-humidity');
+            
+            tempBtn.classList.toggle('bg-blue-500', metric === 'temperature');
+            tempBtn.classList.toggle('text-white', metric === 'temperature');
+            tempBtn.classList.toggle('bg-white/50', metric !== 'temperature');
+            tempBtn.classList.toggle('dark:bg-slate-700/50', metric !== 'temperature');
+
+            humidityBtn.classList.toggle('bg-blue-500', metric === 'humidity');
+            humidityBtn.classList.toggle('text-white', metric === 'humidity');
+            humidityBtn.classList.toggle('bg-white/50', metric !== 'humidity');
+            humidityBtn.classList.toggle('dark:bg-slate-700/50', metric !== 'humidity');
+            
             updateYearlyOverview();
         }
 
@@ -245,13 +259,12 @@
                 data: {
                     labels: allRegions,
                     datasets: [
-                        { label: '강수량 (mm)', data: yearData.map(d => d.rainfall), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
-                        { label: metricLabel, data: metricData, borderColor: metricColor, backgroundColor: metricColor, type: 'line', yAxisID: 'y1', tension: 0.3 }
+                        { label: '강수량 (mm)', data: yearData.map(d => d.rainfall), backgroundColor: 'rgba(59, 130, 246, 0.7)', yAxisID: 'y', borderRadius: 6 },
+                        { label: metricLabel, data: metricData, borderColor: metricColor, backgroundColor: metricColor, type: 'line', yAxisID: 'y1', tension: 0.4 }
                     ]
                 },
                 options: getChartOptions({ y1Label: metricLabel, y1Min: isTemp ? 20 : 70, y1Max: isTemp ? 30 : 100 })
             });
-            document.getElementById('regional-chart-title').textContent = `${year}년 지역별 데이터`;
         }
         
         function drawTrendChart() {
@@ -269,23 +282,23 @@
                     };
                 }).reverse();
             } else {
-                trendData = weatherData.filter(d => d.region === subject);
+                trendData = weatherData.filter(d => d.region === subject).sort((a, b) => a.year - b.year);
             }
 
             const ctx = document.getElementById('trendChart').getContext('2d');
             if (trendChart) trendChart.destroy();
             
             trendChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: trendData.map(d => d.year),
                     datasets: [
-                        { label: '강수량 (mm)', data: trendData.map(d => d.rainfall), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
-                        { label: '평균 기온 (°C)', data: trendData.map(d => d.temperature), borderColor: 'rgba(255, 99, 132, 1)', type: 'line', yAxisID: 'y1', tension: 0.3 },
-                        { label: '평균 습도 (%)', data: trendData.map(d => d.humidity), borderColor: 'rgba(255, 159, 64, 1)', type: 'line', yAxisID: 'y2', tension: 0.3 }
+                        { label: '강수량 (mm)', data: trendData.map(d => d.rainfall), borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: 'rgba(59, 130, 246, 0.2)', yAxisID: 'y', tension: 0.4, fill: true },
+                        { label: '평균 기온 (°C)', data: trendData.map(d => d.temperature), borderColor: 'rgba(239, 68, 68, 1)', backgroundColor: 'rgba(239, 68, 68, 0.2)', yAxisID: 'y1', tension: 0.4, fill: true },
+                        { label: '평균 습도 (%)', data: trendData.map(d => d.humidity), borderColor: 'rgba(245, 158, 11, 1)', backgroundColor: 'rgba(245, 158, 11, 0.2)', yAxisID: 'y2', tension: 0.4, fill: true }
                     ]
                 },
-                options: getChartOptions({ y1Label: '평균 기온 (°C)', y2Label: '평균 습도 (%)', y1Min: 20, y1Max: 30, y2Min: 70, y2Max: 100 })
+                options: getChartOptions({ y1Label: '평균 기온 (°C)', y2Label: '평균 습도 (%)', y1Min: 22, y1Max: 30, y2Min: 70, y2Max: 100 })
             });
         }
         
@@ -293,7 +306,10 @@
             const year1 = parseInt(document.getElementById('year1-select').value);
             const year2 = parseInt(document.getElementById('year2-select').value);
 
-            if (year1 === year2) return; // 같은 연도는 비교하지 않음
+            if (year1 === year2) {
+                if (comparisonChart) comparisonChart.clear();
+                return;
+            }
 
             const year1Data = weatherData.filter(d => d.year === year1);
             const year2Data = weatherData.filter(d => d.year === year2);
@@ -306,8 +322,8 @@
                 data: {
                     labels: allRegions,
                     datasets: [
-                        { label: `${year1}년 강수량 (mm)`, data: year1Data.map(d => d.rainfall), backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                        { label: `${year2}년 강수량 (mm)`, data: year2Data.map(d => d.rainfall), backgroundColor: 'rgba(75, 192, 192, 0.7)' }
+                        { label: `${year1}년 강수량 (mm)`, data: year1Data.map(d => d.rainfall), backgroundColor: 'rgba(59, 130, 246, 0.7)', barPercentage: 0.5, categoryPercentage: 0.7, borderRadius: 6 },
+                        { label: `${year2}년 강수량 (mm)`, data: year2Data.map(d => d.rainfall), backgroundColor: 'rgba(16, 185, 129, 0.7)', barPercentage: 0.5, categoryPercentage: 0.7, borderRadius: 6 }
                     ]
                 },
                 options: getChartOptions({})
@@ -319,32 +335,27 @@
             tableBody.innerHTML = '';
             weatherData.filter(d => d.year === year).forEach(d => {
                 const row = document.createElement('tr');
-                row.className = "border-b border-gray-200/50 hover:bg-white/50";
+                row.className = "hover:bg-slate-200/50 dark:hover:bg-slate-700/50";
                 row.innerHTML = `
-                    <td class="py-3 px-4">${d.region}</td>
+                    <td class="py-3 px-4 font-medium">${d.region}</td>
                     <td class="py-3 px-4">${d.rainfall.toFixed(1)}</td>
                     <td class="py-3 px-4">${d.temperature.toFixed(1)}</td>
                     <td class="py-3 px-4">${d.humidity.toFixed(1)}</td>
                 `;
                 tableBody.appendChild(row);
             });
-             document.getElementById('data-table-title').textContent = `${year}년 상세 데이터`;
         }
 
         function downloadCSV() {
             const year = document.getElementById('year-select').value;
             const yearData = weatherData.filter(d => d.year == year);
-            
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
             csvContent += "지역,총 강수량(mm),평균 기온(°C),평균 습도(%)\n";
-            
             yearData.forEach(row => {
                 csvContent += `${row.region},${row.rainfall},${row.temperature},${row.humidity}\n`;
             });
-
-            const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", encodeURI(csvContent));
             link.setAttribute("download", `monsoon_data_${year}.csv`);
             document.body.appendChild(link);
             link.click();
@@ -352,21 +363,24 @@
         }
 
         function getChartOptions({ y1Label, y2Label, y1Min, y1Max, y2Min, y2Max }) {
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const tickColor = isDark ? '#cbd5e1' : '#475569';
              const options = {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
-                plugins: { legend: { position: 'top' } },
+                plugins: { legend: { position: 'top', labels: { color: tickColor, font: { size: 14 } } } },
                 scales: {
-                    x: { grid: { display: false } },
-                    y: { type: 'linear', position: 'left', title: { display: true, text: '강수량 (mm)', font: { weight: 'bold' } }, beginAtZero: true }
+                    x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 12 } } },
+                    y: { type: 'linear', position: 'left', title: { display: true, text: '강수량 (mm)', font: { weight: 'bold' }, color: tickColor }, beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor } }
                 }
             };
             if(y1Label) {
-                options.scales.y1 = { type: 'linear', position: 'right', title: { display: true, text: y1Label, font: { weight: 'bold' } }, grid: { drawOnChartArea: false }, min: y1Min, max: y1Max };
+                options.scales.y1 = { type: 'linear', position: 'right', title: { display: true, text: y1Label, font: { weight: 'bold' }, color: tickColor }, grid: { drawOnChartArea: false }, min: y1Min, max: y1Max, ticks: { color: tickColor } };
             }
             if(y2Label) {
-                 options.scales.y2 = { type: 'linear', position: 'right', title: { display: true, text: y2Label, font: { weight: 'bold' } }, grid: { drawOnChartArea: false }, min: y2Min, max: y2Max, ticks: { display: false } }; // y2 축은 제목만 표시
+                 options.scales.y2 = { type: 'linear', position: 'right', display: false, title: { display: true, text: y2Label, font: { weight: 'bold' } }, min: y2Min, max: y2Max };
             }
             return options;
         }
